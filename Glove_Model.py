@@ -1,40 +1,47 @@
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, Iterable
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from process_raw import Process_Raw_Inputs
+from Raw_Datasets import Process_Raw_Inputs, Combine_Codes
+
+list2d = [[1,2,3], [4,5,6], [7], [8,9]]
 
 from sklearn.manifold import TSNE
 
 
+def flatten(x):
+    if isinstance(x, Iterable) and not isinstance(x, str):
+        return [a for i in x for a in flatten(i)]
+    else:
+        return [x]
+
 class GloveDataset:
    
     def __init__(self, patient_list):
-        self._window_size = window_size
-        self._codes = [code for code in visit for visit in patient_list]
+        self._patient_list = patient_list
+        self._codes = flatten(patient_list)
         word_counter = Counter()
         word_counter.update(self._codes)
-        self._code2id = {w:i for i, (w,_) in enumerate(word_counter.most_common())}
+        self._code2id = {w:i for i, (w,_) in enumerate(word_counter.most_common())} ##codes ordered from greatest to least
         self._id2code = {i:w for w, i in self._code2id.items()}
         self._vocab_len = len(self._code2id)
        
-        self._id_tokens = [self._code2id[w] for w in self._codes]
+        self._id_patient_list = [[[self._code2id[code] for code in visit] for visit in patient if len(visit) > 1] for patient in self._patient_list]
        
         self._create_coocurrence_matrix()
        
-        print("# of words: {}".format(len(self._codes)))
-        print("Vocabulary length: {}".format(self._vocab_len))
+        print("# of codes: {}".format(len(self._codes)))
+        print("Number of Distinct Codes: {}".format(self._vocab_len))
        
     def _create_coocurrence_matrix(self):
         cooc_mat = defaultdict(Counter)
-        cp_patients= patients #create a lookup visit from original to pop codes from ensuring occurence matrix operations aren't doubled
+        cp_patients= self._id_patient_list #create a lookup visit from original to pop codes from ensuring occurence matrix operations aren't doubled
         for patient in cp_patients:
-            for visit in patients:
-                if len(visit) == 1: continue #if the visit only has one code
-               
+            for visit in patient:      
                 while len(visit) > 1:
                     i_code = visit.pop(0)
                     for j_code in visit:
@@ -94,9 +101,7 @@ class GloveModel(nn.Module):
 def weight_func(x, x_max, alpha):
     """weight_func: the weighting function
     sets a max weight based on x_max
-
     alpha: hyparameter to set variation in weights
-
     """
     wx = (x/x_max)**alpha
     wx = torch.min(wx, torch.ones_like(wx))
@@ -112,21 +117,23 @@ def wmse_loss(weights, inputs, targets):
 
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
 
     #df = pd.read_csv("visit_inputs.csv")[1:1000]
 
     #inputs = Process_Raw_Inputs()
-    with open('visit_inputs_json.txt', 'r') as inFile:
+    with open('Data/visit_inputs_sub.txt', 'r') as inFile:
         inputs = json.load(inFile)
-    cbCodes = Combine_Codes(inputs, code_types=['ICD10'])
+
+
+    patientList= Combine_Codes(inputs, code_types=['ICD10'])
 
     EMBED_DIM = 300
     N_EPOCHS = 100
     BATCH_SIZE = 2048
     X_MAX = 100
     ALPHA = 0.75
-    dataset = GloveDataset(cbCodes)
+    dataset = GloveDataset(patientList)
     glove = GloveModel(dataset._vocab_len, EMBED_DIM)
     glove.cuda()
 
@@ -158,7 +165,7 @@ if __name__ == 'main':
    
         print("Saving model...")
         torch.save(glove.state_dict(), "text8.pt")
-
+    loss_values
     plt.plot(loss_values)
 
     emb_i = glove.wi.weight.cpu().data.numpy()
