@@ -1,5 +1,4 @@
 
-from DatabaseConnection import Get_SQL_Engine
 import pandas as pd
 import json
 
@@ -18,31 +17,28 @@ def Process_Raw_Inputs():
         patients.append(visits)
     return patients
    
-def _flatten_visit(visit, code_types):       
+def flatten_visit(visit, code_types):       
         codes = []
         for code_type in code_types:
             if code_type in visit.keys():
                 codes.extend(visit[code_type])
         return codes
-    
+
 def Combine_Codes(patient_visit_list, code_types):
     """Combines codes within a visit based on the specified code_types.
-
     Parameters
     ----------
     patient_visit_list : list, required
         a list of of listed dictionaries. Patients and their visits and various code types 
         within that visit. [[{}, {}], [{}, {}, {}]] 
-
     Returns
     ------
     list of listed lists. Patients and their visits' combined codes
-
     """
     patients = []
     for patient in patient_visit_list:
         converted_visits = []
         for visit in patient:
-            converted_visits.append(_flatten_visit(visit, code_types))
+            converted_visits.append(flatten_visit(visit, code_types))
         patients.append(converted_visits)
     return patients
