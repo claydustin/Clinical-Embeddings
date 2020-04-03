@@ -3,7 +3,7 @@ import pandas as pd
 import json
 
 
-def Process_Raw_Inputs():
+def Process_Raw_Inputs(df):
     patients = []
     for patient_index, pat_data in df.groupby(['IDX', 'IDX_TYPE']):
         visits = []
