@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from Raw_Datasets import Process_Raw_Inputs, Combine_Codes
+import pandas as pd
 
 list2d = [[1,2,3], [4,5,6], [7], [8,9]]
 
@@ -119,10 +120,10 @@ def wmse_loss(weights, inputs, targets):
 
 if __name__ == '__main__':
 
-    #df = pd.read_csv("visit_inputs.csv")[1:1000]
-
-    #inputs = Process_Raw_Inputs()
-    with open('Data/visit_inputs_sub.txt', 'r') as inFile:
+    df = pd.read_csv("Data/visit_inputs.csv")
+    df.columns = ['IDX', 'IDX_TYPE', 'BILLABLE_START_DT', 'CODE_TYPE', 'CODE_VALUE']
+    inputs = Process_Raw_Inputs(df)
+    with open('Data/visit_inputs_json.txt', 'r') as inFile:
         inputs = json.load(inFile)
 
 
@@ -131,7 +132,7 @@ if __name__ == '__main__':
     EMBED_DIM = 300
     N_EPOCHS = 100
     BATCH_SIZE = 2048
-    X_MAX = 100
+    X_MAX = 1000
     ALPHA = 0.75
     dataset = GloveDataset(patientList)
     glove = GloveModel(dataset._vocab_len, EMBED_DIM)
